@@ -396,3 +396,74 @@ class QInfoGAN2(nn.Module):
         # x: (N, x_dim, 32, 32)
         logit = self.ls(x)
         return logit
+    
+# ==============================================================================
+# =                               models DBGAN                              =
+# ==============================================================================
+class GeneratorDBGAN(nn.Module):
+
+    def __init__(self, z_dim, c_dim, dim=81):
+        super(GeneratorDBGAN, self).__init__()
+
+        def dconv_bn_relu(in_dim, out_dim, kernel_size=4, stride=2, padding=1, output_padding=0):
+            return nn.Sequential(
+                nn.ConvTranspose2d(in_dim, out_dim, kernel_size, stride, padding, output_padding),
+                nn.BatchNorm2d(out_dim),
+                nn.ReLU()
+            )
+
+        self.ls1 = nn.Sequential(
+            dconv_bn_relu(z_dim + c_dim, dim * 4, 4, 1, 0, 0),  # (N, dim * 4, 4, 4) 
+            dconv_bn_relu(dim * 4,dim * 4,1,1,0,0),
+            nn.Dropout(p=0.4),
+            dconv_bn_relu(dim * 4, dim * 2),
+            dconv_bn_relu(dim * 2,dim * 2,1,1,0,0),
+            dconv_bn_relu(dim * 2, dim),# (N, dim, 16, 16)
+            nn.Flatten()
+        )
+        self.ls2 = nn.Sequential(
+            dconv_bn_relu(z_dim + c_dim, dim * 4, 4, 1, 0, 0),  # (N, dim * 4, 4, 4) 
+            dconv_bn_relu(dim * 4,dim * 4,1,1,0,0),
+            nn.Dropout(p=0.4),
+            dconv_bn_relu(dim * 4, dim * 2),
+            dconv_bn_relu(dim * 2,dim * 2,1,1,0,0),
+            dconv_bn_relu(dim * 2, dim),# (N, dim, 16, 16)
+            nn.Flatten()
+        )
+        self.ls3 = nn.Sequential(
+            dconv_bn_relu(z_dim + c_dim, dim * 4, 4, 1, 0, 0),  # (N, dim * 4, 4, 4) 
+            dconv_bn_relu(dim * 4,dim * 4,1,1,0,0),
+            nn.Dropout(p=0.4),
+            dconv_bn_relu(dim * 4, dim * 2),
+            dconv_bn_relu(dim * 2,dim * 2,1,1,0,0),
+            dconv_bn_relu(dim * 2, dim),# (N, dim, 16, 16)
+            nn.Flatten()
+        )
+
+    def forward(self, z, c):
+        # z: (N, z_dim), c: (N, c_dim)
+        x = torch.cat([z, c], 1)
+#         print(x.view(x.size(0), x.size(1), 1, 1).size())
+        x1 = self.ls1(x.view(x.size(0), x.size(1), 1, 1))
+        x2 = self.ls2(x.view(x.size(0), x.size(1), 1, 1))
+        x3 = self.ls3(x.view(x.size(0), x.size(1), 1, 1))
+        x = torch.cat([x1,x2,x3], 1)
+#         print(x.size())
+        return x
+
+
+class DiscriminatorDBGAN(nn.Module):
+
+    def __init__(self, x_dim, c_dim, dim=96, norm='none', weight_norm='spectral_norm'):
+        super(DiscriminatorDBGAN, self).__init__()
+        
+        self.ls = nn.Sequential(
+            nn.Flatten(),
+            nn.Linear(62208, 3000),
+            nn.Linear(3000, 300),
+            nn.Linear(300, 7)
+        )
+
+    def forward(self, x):
+        logit = self.ls(x)
+        return logit
