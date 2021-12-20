@@ -34,7 +34,7 @@ parser.add_argument('--norm', dest='norm', choices=['none', 'batch_norm', 'insta
 parser.add_argument('--weight_norm', dest='weight_norm', choices=['none', 'spectral_norm', 'weight_norm'], default='spectral_norm')
 # others
 parser.add_argument('--experiment_name', dest='experiment_name', default='CGAN_default')
-
+parser.add_argument('--data_path', dest='data_path', default='./data')
 # parse arguments
 args = parser.parse_args()
 # model
@@ -51,6 +51,7 @@ norm = args.norm
 weight_norm = args.weight_norm
 # ohters
 experiment_name = args.experiment_name
+data_path = args.data_path
 
 # ==============================================================================
 # =                                   setting                                  =
@@ -96,7 +97,7 @@ class MyDataset(torch.utils.data.Dataset):
         return self.len
 
 train_loader = torch.utils.data.DataLoader(
-    dataset = MyDataset('./data'),
+    dataset = MyDataset(data_path),
     batch_size=batch_size,
     shuffle=True
 )
